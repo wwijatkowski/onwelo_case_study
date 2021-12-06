@@ -11,42 +11,63 @@ AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY")
 
 
-# Creating the low level functional client to connect with AWS S3.
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id = AWS_ACCESS_KEY_ID,
-    aws_secret_access_key = AWS_SECRET_ACCESS_KEY,
-    region_name='eu-central-1'
-)
+class ClientS3PutObject:
 
-#Set params for requests
-params = {"start_date": "2021-07-31",
-          "end_date": "2021-07-31",
-          "api_key":NASDAQ_DATA_API_KEY
-          }
+    def __init__(self, bucket, file_name, country):
+        self.bucket = bucket
+        self.file_name = file_name
+        self.country = country
 
-# Set country code from file "economist_country_codes.csv"
-country = "POL"
+    # Creating the low level functional client to connect with AWS S3.
+    def create_s3_client(self):
+        self.s3_client = boto3.client(
+            's3',
+            aws_access_key_id = AWS_ACCESS_KEY_ID,
+            aws_secret_access_key = AWS_SECRET_ACCESS_KEY,
+            region_name='eu-central-1'
+        )
 
-# Do requests into API NASDAQ using params
-data = requests.get(f'https://data.nasdaq.com/api/v3/datasets/ECONOMIST/BIGMAC_{country}', params=params)
-data_json = data.json()
+    def api_get_requests(self):
+    #Set params for API requests
+        params = {"start_date": "2021-07-31",
+                "end_date": "2021-07-31",
+                "api_key":NASDAQ_DATA_API_KEY
+                }
+    # Do requests into API NASDAQ using params
+        data = requests.get(f'https://data.nasdaq.com/api/v3/datasets/ECONOMIST/BIGMAC_{self.country}', params=params)
+        return data.json()
+
+    # Change to json file and save into local dictionary
+    def save_json_file_local_dir(self):
+
+        with open(self.file_name, 'w') as f:
+            json.dump(self.api_get_requests(), f)
 
 
-# Change to json file and save into local dictionary
-with open(f'bic_mac_index_{country}.json', 'w') as f:
-    json.dump(data_json, f)
+    # Put object(created json file) to AWS S3
+    def s3_s3_put_object(self):
+        self.response = self.s3_client.put_object(
+            Bucket=self.bucket,
+            Key=self.file_name,
+            Body=json.dumps(self.api_get_requests())
+            )
+
+    def check_status_process(self):
+        status = self.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status == 200:
+            print(f"Successful S3 put_object response. Status - {status}")
+        else:
+            print(f"Unsuccessful S3 put_object response. Status - {status}")
+
+    def run(self):
+        self.create_s3_client()
+        self.api_get_requests()
+        self.s3_s3_put_object()
+        self.check_status_process()
+
+if __name__ == "__main__":
+    client = ClientS3PutObject(S3_AWS_BUCKET, "", "POL")
+    client.run()
 
 
-# Put object(created json file) to AWS S3
-response = s3_client.put_object(
-    Bucket=S3_AWS_BUCKET,
-    Key=f'bic-mac-index-{country}.json',
-    Body=json.dumps(data_json)
-    )
 
-status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
-if status == 200:
-    print(f"Successful S3 put_object response. Status - {status}")
-else:
-    print(f"Unsuccessful S3 put_object response. Status - {status}")

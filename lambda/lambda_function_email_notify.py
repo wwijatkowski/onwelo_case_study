@@ -5,11 +5,11 @@ import boto3
 
 
 def lambda_handler(event, context):
-    for i in event["Records"]:
-        action = i["eventName"]
-        ip = i["requestParameters"]["sourceIPAddress"]
-        bucket_name = i["s3"]["bucket"]["name"]
-        object = i["s3"]["object"]['key']
+
+    action = event["Records"][0].get("eventName", None)
+    ip = event["Records"][0].get("requestParameters", {}).get("sourceIPAddress", None)
+    bucket_name = event["Records"][0].get("s3", {}).get("bucket", {}).get("name", None)
+    object = event["Records"][0].get("s3", {}).get("object", {}).get("key", None)
 
     client = boto3.client("ses")
 
