@@ -21,7 +21,7 @@ with open('../economist_country_codes.csv') as csv_file:
     for row in csv_file:
         countries_with_code_dict[row["COUNTRY"]] = row["CODE"]
 
-# Create json file of all countries with Big Mac index ---> country((full_name): Big_Mac_index
+# Create json file of all countries with Big Mac index ---> country((full_contry_name): Big_Mac_index
 all_countries_big_mac_index_dict = dict()
 for country, code in countries_with_code_dict.items():
     data = requests.get(f'https://data.nasdaq.com/api/v3/datasets/ECONOMIST/BIGMAC_{code}/data.json', params=params)
